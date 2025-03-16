@@ -1,0 +1,10 @@
+{
+  "tokenPrivateKey": "default-token-key",
+  "app": {
+    "port": 3000
+  },
+  "db": {
+    "host": "localhost",
+    "name": "mydb"
+  }
+}
