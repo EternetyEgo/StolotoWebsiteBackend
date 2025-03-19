@@ -3,8 +3,11 @@ const { exit } = require("process");
 
 const connect = async () => {
   await mongoose
-    .connect("mongodb://127.0.0.1:27017/stolotoBackend")
-    .then((res) => {
+    .connect("mongodb://mongo:NiypZbntFUWIhpyguMdWmDyFgnHCjrmT@switchyard.proxy.rlwy.net:27898/stoloto?authSource=admin", {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
+    .then(() => {
       console.log("\u001b[32;1m ⚙️  App has connected to MongoDB");
     })
     .catch((err) => {
