@@ -3,10 +3,7 @@ const cors = require("cors");
 
 module.exports = (app) => {
   app.use(
-    cors({
-      methods: ["GET", "POST", "DELETE"],
-      origin: "*",
-    })
+    cors()
   );
   app.use(express.json());
 
