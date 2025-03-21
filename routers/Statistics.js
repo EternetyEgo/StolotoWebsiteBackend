@@ -4,28 +4,28 @@ const puppeteer = require("puppeteer");
 const router = express.Router();
 
 const urls = {
-  "4-iz-20": "https://lotodata.ru/4-iz-20/",
-  ohota: "https://lotodata.ru/ohota/",
-  "5-iz-36": "https://lotodata.ru/5-iz-36/",
-  "6-iz-45": "https://lotodata.ru/6-iz-45/",
-  "7-iz-49": "https://lotodata.ru/7-iz-49/",
-  zabava: "https://lotodata.ru/zabava/",
-  rapido: "https://lotodata.ru/rapido/",
-  rapido20: "https://lotodata.ru/rapido20/",
-  "rapido-drive": "https://lotodata.ru/rapido-drive/",
-  top3: "https://lotodata.ru/top3/",
-  duel: "https://lotodata.ru/duel/",
-  "6-iz-36": "https://lotodata.ru/6-iz-36/",
-  "bolshoe-sportloto": "https://lotodata.ru/bolshoe-sportloto/",
-  powerball: "https://lotodata.ru/powerball/",
-  eurojackpot: "https://lotodata.ru/eurojackpot/",
-  euromillions: "https://lotodata.ru/euromillions/",
-  megamillions: "https://lotodata.ru/megamillions/",
-  laprimitiva: "https://lotodata.ru/laprimitiva/",
-  "oz-lotto": "https://lotodata.ru/oz-lotto/",
-  uklotto: "https://lotodata.ru/uklotto/",
-  superenalotto: "https://lotodata.ru/superenalotto/",
-  bonoloto: "https://lotodata.ru/bonoloto/",
+  "4-iz-20": "https://lotodata.ru/4-iz-20/?limit=5000",
+  ohota: "https://lotodata.ru/ohota/?limit=5000",
+  "5-iz-36": "https://lotodata.ru/5-iz-36/?limit=3000",
+  "6-iz-45": "https://lotodata.ru/6-iz-45/?limit=5000",
+  "7-iz-49": "https://lotodata.ru/7-iz-49/?limit=1000",
+  zabava: "https://lotodata.ru/zabava/?limit=1000",
+  rapido: "https://lotodata.ru/rapido/?limit=2000",
+  rapido20: "https://lotodata.ru/rapido20/?limit=2000",
+  "rapido-drive": "https://lotodata.ru/rapido-drive/?limit=2000",
+  top3: "https://lotodata.ru/top3/?limit=5000",
+  duel: "https://lotodata.ru/duel/?limit=1000",
+  "6-iz-36": "https://lotodata.ru/6-iz-36/?limit=1000",
+  "bolshoe-sportloto": "https://lotodata.ru/bolshoe-sportloto/?limit=3000",
+  powerball: "https://lotodata.ru/powerball/?limit=200",
+  eurojackpot: "https://lotodata.ru/eurojackpot/?limit=200",
+  euromillions: "https://lotodata.ru/euromillions/?limit=200",
+  megamillions: "https://lotodata.ru/megamillions/?limit=200",
+  laprimitiva: "https://lotodata.ru/laprimitiva/?limit=200",
+  "oz-lotto": "https://lotodata.ru/oz-lotto/?limit=200",
+  uklotto: "https://lotodata.ru/uklotto/?limit=200",
+  superenalotto: "https://lotodata.ru/superenalotto/?limit=200",
+  bonoloto: "https://lotodata.ru/bonoloto/?limit=200",
 };
 
 // Ma'lumotlarni saqlash uchun kesh
@@ -35,20 +35,7 @@ let cachedData = {};
 const fetchLotteryData = async () => {
   console.log("♻️ Ma'lumotlar yangilanmoqda...");
 
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--single-process", // Agar bitta process kerak bo'lsa
-      "--disable-gpu",
-    ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/google-chrome-stable",
-  });
+  const browser = await puppeteer.launch({ headless: true });
 
   for (const [name, url] of Object.entries(urls)) {
     try {
@@ -77,6 +64,9 @@ const fetchLotteryData = async () => {
   await browser.close();
   console.log("✅ Barcha ma'lumotlar yangilandi!");
 };
+router.get("/names", (req, res) => {
+  return res.json({ names: Object.keys(urls) });
+});
 
 // API endpoint: /api/lottery/:name
 router.get("/:name", async (req, res) => {

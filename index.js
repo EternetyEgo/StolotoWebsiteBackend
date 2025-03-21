@@ -7,6 +7,6 @@ const port = process.env.PORT || 5050;
 require("./server/db")(app);
 require("./server/apis")(app);
 
-app.listen(port, () => {
-  console.log(`\u001b[33m 🚀 Server started. \n\u001b[32m Local IP: http://127.0.0.1:${port}`);
+app.listen(port, "0.0.0.0", () => {
+  console.log(`🚀 Server started. Local IP: http://192.168.0.21:${port}`);
 });
