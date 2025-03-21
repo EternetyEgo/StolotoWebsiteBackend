@@ -35,7 +35,20 @@ let cachedData = {};
 const fetchLotteryData = async () => {
   console.log("♻️ Ma'lumotlar yangilanmoqda...");
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process", // Agar bitta process kerak bo'lsa
+      "--disable-gpu",
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/google-chrome-stable",
+  });
 
   for (const [name, url] of Object.entries(urls)) {
     try {
