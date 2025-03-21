@@ -12,4 +12,5 @@ module.exports = (app) => {
   app.use(express.json());
 
   app.use("/api/user", require("../routers/User-route"));
+  app.use("/api/statistics", require("../routers/Statistics"));
 };
