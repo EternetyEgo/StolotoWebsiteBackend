@@ -1,7 +1,9 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
+const fs = require("fs");
 
 const router = express.Router();
+const DATA_FILE = "data.json";
 
 const urls = {
   "4-iz-20": "https://lotodata.ru/4-iz-20/?limit=5000",
@@ -28,8 +30,31 @@ const urls = {
   bonoloto: "https://lotodata.ru/bonoloto/?limit=200",
 };
 
-// Ma'lumotlarni saqlash uchun kesh
+// Ma'lumotlarni keshlash
 let cachedData = {};
+
+// JSON fayldan ma'lumotlarni yuklash
+const loadCacheFromFile = () => {
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      const rawData = fs.readFileSync(DATA_FILE);
+      cachedData = JSON.parse(rawData);
+      console.log("📂 Kesh fayldan yuklandi.");
+    } catch (error) {
+      console.error("❌ JSON faylni o‘qishda xatolik:", error);
+    }
+  }
+};
+
+// JSON faylga keshni saqlash
+const saveCacheToFile = () => {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(cachedData, null, 2));
+    console.log("✅ Kesh JSON faylga saqlandi.");
+  } catch (error) {
+    console.error("❌ JSON faylga yozishda xatolik:", error);
+  }
+};
 
 // Sahifadan ma'lumot olish funksiyasi
 const fetchLotteryData = async () => {
@@ -63,7 +88,12 @@ const fetchLotteryData = async () => {
 
   await browser.close();
   console.log("✅ Barcha ma'lumotlar yangilandi!");
+
+  // JSON faylga saqlash
+  saveCacheToFile();
 };
+
+// API endpoint: /api/lottery/names
 router.get("/names", (req, res) => {
   return res.json({ names: Object.keys(urls) });
 });
@@ -76,7 +106,7 @@ router.get("/:name", async (req, res) => {
     return res.status(404).json({ error: "Bunday lotereya topilmadi!" });
   }
 
-  // Keshda bor bo‘lsa, shuni qaytar
+  // Agar keshda bor bo‘lsa, shuni qaytar
   if (cachedData[siteName]) {
     return res.json(cachedData[siteName]);
   }
@@ -84,10 +114,10 @@ router.get("/:name", async (req, res) => {
   res.status(500).json({ error: "Ma'lumotlar hali yangilanmagan!" });
 });
 
-// Har 30 daqiqada yangilash (1800000ms)
+// Har 30 daqiqada ma'lumotlarni yangilash (1800000ms)
 setInterval(fetchLotteryData, 1800000);
 
-// Server ishga tushganida birinchi marta ma'lumotni olish
-fetchLotteryData();
+// Server ishga tushganida JSON fayldan ma'lumotlarni yuklash
+loadCacheFromFile();
 
 module.exports = router;
