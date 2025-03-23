@@ -142,14 +142,18 @@ router.delete("/delete/:id", auth, async (req, res) => {
       return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
     }
 
-    // Kombinatsiyani o‘chirish
-// Kombinatsiyani o‘chirish (backend)
-user.numbers = user.numbers.filter((num) => num.id.toString() !== id);
-await user.save();
+    user.numbers = user.numbers.filter((num) => {
+      if (!num || typeof num !== "object" || !num.id) {
+        return true; // ❗ Xato ma'lumotlar o‘chirilmasin
+      }
+      return num.id.toString() !== id.toString(); // ✅ ID'ni tekshirish
+    });
+    await user.save();
 
     res.json({ success: true, message: "Комбинация удалена" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Ошибка удаления", error });
+    console.error("Xatolik:", error.message, error.stack);
+    res.status(500).json({ success: false, message: "Ошибка удаления", error: error.toString() });
   }
 });
 
