@@ -3,10 +3,7 @@ const { exit } = require("process");
 
 const connect = async () => {
   await mongoose
-    .connect("mongodb://mongo:NiypZbntFUWIhpyguMdWmDyFgnHCjrmT@switchyard.proxy.rlwy.net:27898/stoloto?authSource=admin", {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
+    .connect("mongodb+srv://lazizbekabdullayev118:8mJhRMX9C2BHgOnQ@cluster0.yu5xyhp.mongodb.net/stoploto?retryWrites=true&w=majority&appName=Cluster0")
     .then(() => {
       console.log("\u001b[32;1m ⚙️  App has connected to MongoDB");
     })
