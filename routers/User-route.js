@@ -101,7 +101,7 @@ router.post("/register", async (req, res) => {
 
 //! login
 
-router.post("/login", async (req, res) => {
+router.post("/check-admin", async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -126,6 +126,32 @@ router.post("/login", async (req, res) => {
     res.json({ token, role: user.role });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email va parolni kiriting" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+    }
+
+    const comparePass = await bcrypt.compare(password, user.password);
+    if (!comparePass) {
+      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+    }
+
+    const token = jwt.sign({ user: user._id }, config.get("tokenPrivateKey"), { expiresIn: "30d" });
+    res.json({ message: "Kirish muvaffaqiyatli", token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server xatosi", error });
   }
 });
 
