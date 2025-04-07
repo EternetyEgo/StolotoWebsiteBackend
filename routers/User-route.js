@@ -12,6 +12,61 @@ router.get("/me", auth, async (req, res) => {
   res.json({ data: req.user });
 });
 
+//! get all users
+router.get("/all", async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Server xatosi", error: err });
+  }
+});
+
+//! edit balance user (faqat ADMIN uchun)
+router.post("/me/:id/balance", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { balance } = req.body;
+
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Sizda bu amalni bajarish uchun ruxsat yo'q" });
+    }
+
+    if (balance === undefined || balance === null) {
+      return res.status(400).json({ message: "Balance is required" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+    }
+
+    user.balance = balance;
+    await user.save();
+
+    res.json({ message: "Hisob muvaffaqiyatli yangilandi", user });
+  } catch (error) {
+    console.error("Xatolik:", error.message, error.stack);
+    res.status(500).json({ message: "Server xatosi", error: error.toString() });
+  }
+});
+
+//! delete user
+router.delete("/me/:id", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Ruxsat berilmagan" });
+    }
+
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+
+    res.json({ message: "Foydalanuvchi o‘chirildi", user });
+  } catch (error) {
+    res.status(500).json({ message: "Server xatosi", error });
+  }
+});
+
 //! register
 router.post("/register", async (req, res) => {
   try {
@@ -45,29 +100,32 @@ router.post("/register", async (req, res) => {
 });
 
 //! login
+
 router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email va parolni kiriting" });
-    }
-
     const user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const comparePass = await bcrypt.compare(password, user.password);
-    if (!comparePass) {
-      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+    // Parolni bcrypt.compare yordamida tekshirish
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ user: user._id }, config.get("tokenPrivateKey"), { expiresIn: "1d" });
-    res.json({ message: "Kirish muvaffaqiyatli", token });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server xatosi", error });
+    if (user.role !== "ADMIN") {
+      return res.status(403).json({ message: "You do not have admin access" });
+    }
+
+    const token = jwt.sign({ user: user._id }, config.get("tokenPrivateKey"), { expiresIn: "30d" });
+
+    res.json({ token, role: user.role });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -133,10 +191,9 @@ router.post("/create-number", auth, async (req, res) => {
 
 router.delete("/delete/:id", auth, async (req, res) => {
   try {
-    const userId = req.user.id; // Middleware orqali olinishi kerak
+    const userId = req.user.id;
     const id = req.params.id;
 
-    // Userni topish
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
@@ -144,9 +201,9 @@ router.delete("/delete/:id", auth, async (req, res) => {
 
     user.numbers = user.numbers.filter((num) => {
       if (!num || typeof num !== "object" || !num.id) {
-        return true; // ❗ Xato ma'lumotlar o‘chirilmasin
+        return true;
       }
-      return num.id.toString() !== id.toString(); // ✅ ID'ni tekshirish
+      return num.id.toString() !== id.toString();
     });
     await user.save();
 

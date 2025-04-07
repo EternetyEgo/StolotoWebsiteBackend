@@ -4,23 +4,32 @@ const config = require("config");
 
 const auth = async function (req, res, next) {
   const token = req.header("Authorization")?.split(" ")[1];
+
   if (!token) {
     return res.status(401).json({
       status: false,
-      message: "Token bolmaganligi sabab sorov toxtatildi",
+      message: "Token yo‘q",
     });
   }
+
   try {
     const decoded = jwt.verify(token, config.get("tokenPrivateKey"));
     const user = await User.findById(decoded.user);
+
+    if (!user) {
+      return res.status(401).json({ status: false, message: "User topilmadi" });
+    }
+
     req.user = user;
+
+    // Endi ADMINmi yoki yo‘qmi — tekshiramiz
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Ruxsat yo‘q" });
+    }
+
     next();
   } catch (err) {
-    req.user = null;
-    res.status(401).json({
-      status: false,
-      message: "Token is not valid",
-    });
+    res.status(401).json({ status: false, message: "Token noto‘g‘ri" });
   }
 };
 
