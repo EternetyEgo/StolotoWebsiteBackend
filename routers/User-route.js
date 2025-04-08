@@ -4,15 +4,16 @@ const jwt = require("jsonwebtoken");
 const config = require("config");
 
 const User = require("../models/User");
+const Pricing = require("../models/pricing");
 const auth = require("../security/auth");
 const router = express.Router();
 
-//! get me
+// get me
 router.get("/me", auth, async (req, res) => {
   res.json({ data: req.user });
 });
 
-//! get all users
+// get all users
 router.get("/all", async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -22,7 +23,7 @@ router.get("/all", async (req, res) => {
   }
 });
 
-//! edit balance user (faqat ADMIN uchun)
+// edit balance user (faqat ADMIN uchun)
 router.post("/me/:id/balance", auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -51,7 +52,7 @@ router.post("/me/:id/balance", auth, async (req, res) => {
   }
 });
 
-//! delete user
+// delete user
 router.delete("/me/:id", auth, async (req, res) => {
   try {
     if (req.user.role !== "ADMIN") {
@@ -61,13 +62,13 @@ router.delete("/me/:id", auth, async (req, res) => {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
 
-    res.json({ message: "Foydalanuvchi o‘chirildi", user });
+    res.json({ message: "Foydalanuvchi o'chirildi", user });
   } catch (error) {
     res.status(500).json({ message: "Server xatosi", error });
   }
 });
 
-//! register
+// register
 router.post("/register", async (req, res) => {
   try {
     const { firstname, lastname, email, password } = req.body;
@@ -99,8 +100,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-//! login
-
+// login admin
 router.post("/check-admin", async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -110,7 +110,6 @@ router.post("/check-admin", async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // Parolni bcrypt.compare yordamida tekshirish
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -129,6 +128,7 @@ router.post("/check-admin", async (req, res) => {
   }
 });
 
+// login user
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -139,12 +139,12 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+      return res.status(400).json({ message: "Email yoki parol noto'g'ri" });
     }
 
     const comparePass = await bcrypt.compare(password, user.password);
     if (!comparePass) {
-      return res.status(400).json({ message: "Email yoki parol noto‘g‘ri" });
+      return res.status(400).json({ message: "Email yoki parol noto'g'ri" });
     }
 
     const token = jwt.sign({ user: user._id }, config.get("tokenPrivateKey"), { expiresIn: "30d" });
@@ -155,7 +155,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-//! update user
+// update user
 router.post("/update", auth, async (req, res) => {
   try {
     const { firstname, lastname, email, password } = req.body;
@@ -189,7 +189,7 @@ router.post("/update", auth, async (req, res) => {
   }
 });
 
-//! user numbers
+// user numbers
 router.post("/create-number", auth, async (req, res) => {
   try {
     const { numbers } = req.body;
@@ -240,33 +240,111 @@ router.delete("/delete/:id", auth, async (req, res) => {
   }
 });
 
-router.post("/check", async (req, res) => {
+// Обновленный маршрут для проверки и обновления статуса плана
+// Модифицирован, чтобы баланс не уменьшался при покупке плана
+router.post("/check", auth, async (req, res) => {
   const { userId, pricingId } = req.body;
 
   try {
+    // Проверяем, что пользователь запрашивает информацию о себе или является админом
+    if (req.user.id !== userId && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "У вас нет прав для выполнения этого действия",
+      });
+    }
+
     const user = await User.findById(userId);
     const pricing = await Pricing.findById(pricingId);
 
     if (!user || !pricing) {
-      return res.status(404).json({ success: false, message: "User yoki Pricing topilmadi" });
+      return res.status(404).json({
+        success: false,
+        message: "Пользователь или тарифный план не найден",
+      });
     }
 
-    const price = parseFloat(pricing.price); // string bo‘lsa son qilamiz
-    // Sotib olishda checkStatus yangilanishi
-    if (user.balance >= price) {
-      user.balance -= price;
-      if (!user.numbers.includes(pricingId)) {
-        user.numbers.push(pricingId);
-      }
-      user.checkStatus = true; // Check holatini yangilaymiz
-      await user.save();
+    const price = Number.parseFloat(pricing.price);
 
-      return res.status(200).json({ success: true, message: "Sotib olindi", balance: user.balance });
-    } else {
-      return res.status(400).json({ success: false, message: "Pul yetarli emas" });
+    // Проверяем достаточно ли средств
+    if (user.balance < price) {
+      return res.status(400).json({
+        success: false,
+        message: "Недостаточно средств на балансе",
+      });
     }
+
+    // Обновляем статус пользователя, но НЕ уменьшаем баланс
+    // user.balance -= price; // Закомментировано, чтобы баланс не уменьшался
+    user.checkStatus = true;
+    user.activePlanId = pricingId; // Сохраняем ID активного плана
+
+    // Добавляем ID плана в массив numbers, если его там еще нет
+    const planExists = user.numbers.some((num) => num.id && num.id.toString() === pricingId.toString());
+
+    if (!planExists) {
+      user.numbers.push({
+        id: pricingId,
+        dateAdded: new Date().toISOString(),
+        status: "active",
+        numbers: [pricing.date, pricing.price],
+      });
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "План успешно приобретен",
+      balance: user.balance,
+      checkStatus: user.checkStatus,
+      activePlanId: user.activePlanId,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Ошибка при обработке запроса:", err);
+    res.status(500).json({
+      success: false,
+      message: "Ошибка сервера",
+      error: err.message,
+    });
+  }
+});
+
+// Добавляем маршрут для сброса статуса плана (для тестирования)
+router.post("/reset-plan", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Только администратор может сбросить статус плана",
+      });
+    }
+
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Пользователь не найден",
+      });
+    }
+
+    user.checkStatus = false;
+    user.activePlanId = null;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Статус плана сброшен успешно",
+    });
+  } catch (err) {
+    console.error("Ошибка при сбросе статуса плана:", err);
+    res.status(500).json({
+      success: false,
+      message: "Ошибка сервера",
+      error: err.message,
+    });
   }
 });
 
