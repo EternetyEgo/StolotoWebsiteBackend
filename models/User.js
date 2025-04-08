@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
     role: { type: String, default: "USER" },
     numbers: { type: [], default: [] },
     balance: { type: Number, default: 0 },
+    checkStatus: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

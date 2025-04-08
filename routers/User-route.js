@@ -240,4 +240,34 @@ router.delete("/delete/:id", auth, async (req, res) => {
   }
 });
 
+router.post("/check", async (req, res) => {
+  const { userId, pricingId } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    const pricing = await Pricing.findById(pricingId);
+
+    if (!user || !pricing) {
+      return res.status(404).json({ success: false, message: "User yoki Pricing topilmadi" });
+    }
+
+    const price = parseFloat(pricing.price); // string bo‘lsa son qilamiz
+    // Sotib olishda checkStatus yangilanishi
+    if (user.balance >= price) {
+      user.balance -= price;
+      if (!user.numbers.includes(pricingId)) {
+        user.numbers.push(pricingId);
+      }
+      user.checkStatus = true; // Check holatini yangilaymiz
+      await user.save();
+
+      return res.status(200).json({ success: true, message: "Sotib olindi", balance: user.balance });
+    } else {
+      return res.status(400).json({ success: false, message: "Pul yetarli emas" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
