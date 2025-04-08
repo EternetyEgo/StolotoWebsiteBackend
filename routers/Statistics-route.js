@@ -93,6 +93,7 @@ const fetchLotteryData = async () => {
   saveCacheToFile();
 };
 
+
 // API endpoint: /api/lottery/names
 router.get("/names", (req, res) => {
   return res.json({ names: Object.keys(urls) });

@@ -21,13 +21,7 @@ const auth = async function (req, res, next) {
     }
 
     req.user = user;
-
-    // Endi ADMINmi yoki yo‘qmi — tekshiramiz
-    if (req.user.role !== "ADMIN") {
-      return res.status(403).json({ message: "Ruxsat yo‘q" });
-    }
-
-    next();
+    next(); // Admin emas, faqat userni tekshirish uchun o‘tkazamiz
   } catch (err) {
     res.status(401).json({ status: false, message: "Token noto‘g‘ri" });
   }
