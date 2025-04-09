@@ -240,17 +240,15 @@ router.delete("/delete/:id", auth, async (req, res) => {
   }
 });
 
-// Обновленный маршрут для проверки и обновления статуса плана
-// Модифицирован, чтобы баланс не уменьшался при покупке плана
 router.post("/check", auth, async (req, res) => {
   const { userId, pricingId } = req.body;
 
   try {
-    // Проверяем, что пользователь запрашивает информацию о себе или является админом
+    // Authorization check
     if (req.user.id !== userId && req.user.role !== "ADMIN") {
       return res.status(403).json({
         success: false,
-        message: "У вас нет прав для выполнения этого действия",
+        message: "Unauthorized action",
       });
     }
 
@@ -260,26 +258,25 @@ router.post("/check", auth, async (req, res) => {
     if (!user || !pricing) {
       return res.status(404).json({
         success: false,
-        message: "Пользователь или тарифный план не найден",
+        message: "User or pricing plan not found",
       });
     }
 
     const price = Number.parseFloat(pricing.price);
 
-    // Проверяем достаточно ли средств
+    // Check if user has enough balance
     if (user.balance < price) {
       return res.status(400).json({
         success: false,
-        message: "Недостаточно средств на балансе",
+        message: "Insufficient balance",
       });
     }
 
-    // Обновляем статус пользователя, но НЕ уменьшаем баланс
-    // user.balance -= price; // Закомментировано, чтобы баланс не уменьшался
+    // Deduct from balance
+    user.balance -= price;
     user.checkStatus = true;
-    user.activePlanId = pricingId; // Сохраняем ID активного плана
 
-    // Добавляем ID плана в массив numbers, если его там еще нет
+    // Add plan to numbers array if it's not already added
     const planExists = user.numbers.some((num) => num.id && num.id.toString() === pricingId.toString());
 
     if (!planExists) {
@@ -291,20 +288,25 @@ router.post("/check", auth, async (req, res) => {
       });
     }
 
+    // Assign active plan to the user
+    user.activePlanId = pricingId; // Assign the pricing plan ID
+
+    // Save the updated user information
     await user.save();
 
+    // Return updated information
     return res.status(200).json({
       success: true,
-      message: "План успешно приобретен",
+      message: "Plan purchased successfully",
       balance: user.balance,
       checkStatus: user.checkStatus,
-      activePlanId: user.activePlanId,
+      activePlanId: user.activePlanId, // Return the active plan ID to confirm it's linked
     });
   } catch (err) {
-    console.error("Ошибка при обработке запроса:", err);
+    console.error("Error processing request:", err);
     res.status(500).json({
       success: false,
-      message: "Ошибка сервера",
+      message: "Server error",
       error: err.message,
     });
   }
