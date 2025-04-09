@@ -22,6 +22,39 @@ router.get("/all", async (req, res) => {
     res.status(500).json({ message: "Server xatosi", error: err });
   }
 });
+// admin doxod stats
+router.get("/get-allbalance", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Ruxsat yo'q" });
+    }
+
+    const users = await User.find();
+
+    let totalDoxod = 0;
+    const logs = [];
+
+    users.forEach(user => {
+      if (user.doxodLogs && user.doxodLogs.length > 0) {
+        user.doxodLogs.forEach(log => {
+          totalDoxod += log.amount;
+          logs.push({
+            userId: user._id,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            amount: log.amount,
+            date: log.date,
+          });
+        });
+      }
+    });
+
+    res.json({ totalDoxod, logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server xatosi", error: err.message });
+  }
+});
 
 // edit balance user (faqat ADMIN uchun)
 router.post("/me/:id/balance", auth, async (req, res) => {
