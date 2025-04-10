@@ -8,5 +8,5 @@ require("./server/db")(app);
 require("./server/apis")(app);
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`🚀 Server started. Access via: http://localhost:${port} or http://192.168.13.21:${port}`);
+  console.log(`🚀 Server started. Access via: http://localhost:${port} or :${port}`);
 });
