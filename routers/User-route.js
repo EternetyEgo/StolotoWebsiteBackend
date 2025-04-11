@@ -35,16 +35,13 @@ router.get("/get-allbalance", auth, async (req, res) => {
     const logs = [];
 
     users.forEach(user => {
-      if (user.doxodLogs && user.doxodLogs.length > 0) {
-        user.doxodLogs.forEach(log => {
-          totalDoxod += log.amount;
-          logs.push({
-            userId: user._id,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            amount: log.amount,
-            date: log.date,
-          });
+      if (user.balance && user.balance > 0) {
+        totalDoxod += user.balance;
+        logs.push({
+          userId: user._id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          balance: user.balance,
         });
       }
     });
@@ -55,6 +52,7 @@ router.get("/get-allbalance", auth, async (req, res) => {
     res.status(500).json({ message: "Server xatosi", error: err.message });
   }
 });
+
 
 // edit balance user (faqat ADMIN uchun)
 router.post("/me/:id/balance", auth, async (req, res) => {
